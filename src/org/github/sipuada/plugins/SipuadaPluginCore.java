@@ -50,7 +50,7 @@ import android.javax.sdp.SdpFactoryImpl;
 import android.javax.sdp.SdpParseException;
 import android.javax.sdp.SessionDescription;
 
-public abstract class SipuadaPlugin {
+public abstract class SipuadaPluginCore implements SipuadaPlugin {
 
 	protected final Map<String, Record> records = new HashMap<>();
     protected final Map<String, CallRole> roles = new HashMap<>();
@@ -98,135 +98,13 @@ public abstract class SipuadaPlugin {
 		doStartPlugin();
 	}
 
-	protected abstract void doStartPlugin();
+	public abstract void doStartPlugin();
 
 	public void stopPlugin() {
 		doStopPlugin();
 	}
 
-	protected abstract void doStopPlugin();
-
-	public enum SessionType {
-
-		REGULAR("session"),
-		EARLY("early-session"),
-		BOTH("session"); //USED ONLY INTERNALLY (AND BY PLUGIN WRITERS)
-						//FOR SPECIFYING CODECS SPECIFIC TO A SESSION TYPE
-
-		private String disposition;
-
-		SessionType(String disposition) {
-			this.disposition = disposition;
-		}
-
-		public String getDisposition() {
-			return disposition;
-		}
-
-	}
-
-	public enum SupportedMediaType {
-
-        AUDIO("audio"),
-//        MESSAGE("message"),
-//        DATA("data"),
-        VIDEO("video");
-
-    	private final String mediaTypeName;
-
-    	private SupportedMediaType(String mediaTypeName) {
-            this.mediaTypeName = mediaTypeName;
-        }
-
-    	@Override
-        public String toString() {
-            return mediaTypeName;
-        }
-
-    	public static SupportedMediaType parseString(String mediaTypeName)
-            throws IllegalArgumentException {
-            if (AUDIO.toString().equals(mediaTypeName)) {
-            	return AUDIO;
-//            } else if (MESSAGE.toString().equals(mediaTypeName)) {
-//            	return MESSAGE;
-//            } else if (DATA.toString().equals(mediaTypeName)) {
-//            	return DATA;
-            } else if (VIDEO.toString().equals(mediaTypeName)) {
-            	return VIDEO;
-            }
-            throw new IllegalArgumentException
-        		(mediaTypeName + " is not a currently supported MediaType");
-        }
-
-    }
-
-	public interface SupportedMediaCodec {
-
-		public String getEncoding();
-
-    	public int getType();
-
-    	public int getClockRate();
-
-    	public SupportedMediaType getMediaType();
-
-    	public boolean isEnabledByDefault();
-
-    	public SessionType getAllowedSessionType();
-
-	}
-
-	public class MediaCodecInstance {
-
-    	private final String encoding;
-    	private final int type;
-    	private final int clockRate;
-    	private final SupportedMediaType mediaType;
-    	private final SessionType allowedSessionType;
-    	private boolean isEnabled;
-
-    	private MediaCodecInstance(SupportedMediaCodec mediaCodec) {
-        	this.encoding = mediaCodec.getEncoding();
-    		this.type = mediaCodec.getType();
-    		this.clockRate = mediaCodec.getClockRate();
-    		this.mediaType = mediaCodec.getMediaType();
-    		this.allowedSessionType = mediaCodec.getAllowedSessionType();
-    		this.isEnabled = mediaCodec.isEnabledByDefault();
-    	}
-
-    	public String getEncoding() {
-    		return encoding;
-    	}
-
-    	public int getType() {
-			return type;
-		}
-
-    	public int getClockRate() {
-			return clockRate;
-		}
-
-    	public String getRtpmap() {
-			return String.format(Locale.US, "%s/%d", encoding, clockRate);
-		}
-
-    	public SupportedMediaType getMediaType() {
-			return mediaType;
-		}
-
-    	public SessionType getAllowedSessionType() {
-    		return allowedSessionType;
-    	}
-
-    	public boolean isEnabled() {
-    		return isEnabled;
-    	}
-
-    	public void setEnabled(boolean isEnabled) {
-    		this.isEnabled = isEnabled;
-    	}
-
-	}
+	public abstract void doStopPlugin();
 
 	private Set<SupportedMediaCodec> parseMediaCodecs
 			(Class<? extends SupportedMediaCodec> mediaCodecsEnumClass) {
@@ -306,90 +184,6 @@ public abstract class SipuadaPlugin {
 		}
 
 	}
-
-	protected enum MediaDirection {
-		SENDRECV, SENDONLY, RECVONLY, INACTIVE
-	}
-
-	protected class Session {
-
-    	private final String localDataAddress;
-    	private final int localDataPort;
-    	private final String localControlAddress;
-    	private final int localControlPort;
-    	private final String remoteDataAddress;
-    	private final int remoteDataPort;
-    	private final String remoteControlAddress;
-    	private final int remoteControlPort;
-    	private MediaDirection direction;
-    	private Object payload;
-
-    	public Session(String localDataAddress, int localDataPort,
-    			String localControlAddress, int localControlPort,
-    			String remoteDataAddress, int remoteDataPort,
-    			String remoteControlAddress, int remoteControlPort,
-    			MediaDirection direction) {
-			super();
-			this.localDataAddress = localDataAddress;
-			this.localDataPort = localDataPort;
-			this.localControlAddress = localControlAddress;
-			this.localControlPort = localControlPort;
-			this.remoteDataAddress = remoteDataAddress;
-			this.remoteDataPort = remoteDataPort;
-			this.remoteControlAddress = remoteControlAddress;
-			this.remoteControlPort = remoteControlPort;
-			this.direction = direction;
-		}
-
-    	public String getLocalDataAddress() {
-			return localDataAddress;
-		}
-
-    	public int getLocalDataPort() {
-			return localDataPort;
-		}
-
-    	public String getLocalControlAddress() {
-			return localControlAddress;
-		}
-
-    	public int getLocalControlPort() {
-			return localControlPort;
-		}
-
-    	public String getRemoteDataAddress() {
-			return remoteDataAddress;
-		}
-
-    	public int getRemoteDataPort() {
-			return remoteDataPort;
-		}
-
-    	public String getRemoteControlAddress() {
-			return remoteControlAddress;
-		}
-
-    	public int getRemoteControlPort() {
-			return remoteControlPort;
-		}
-
-    	public MediaDirection getDirection() {
-			return direction;
-		}
-
-    	public void setDirection(MediaDirection direction) {
-			this.direction = direction;
-		}
-
-    	public Object getPayload() {
-			return payload;
-		}
-
-    	public void setPayload(Object payload) {
-			this.payload = payload;
-		}
-
-    }
 
 	/**
 	 * Generates offer to go along a session-creating request.
@@ -521,7 +315,7 @@ public abstract class SipuadaPlugin {
     	try {
 			return new TurnCandidateHarvester(new TransportAddress
 				(InetAddress.getByName("numb.viagenie.ca"), 3478, Transport.UDP),
-				new LongTermCredential("renandiniza@gmail.com", "renan"));
+				new LongTermCredential("guisgb13@gmail.com", "xibaca"));
 		} catch (UnknownHostException turnServerUnavailable) {
 			turnServerUnavailable.printStackTrace();
 	    	return null;
@@ -609,7 +403,7 @@ public abstract class SipuadaPlugin {
 			mediaCodecs = audioCodecs;
 		}
 		for (MediaCodecInstance mediaCodec : mediaCodecs) {
-			if (!mediaCodec.isEnabled || (mediaCodec.getAllowedSessionType() != SessionType.BOTH
+			if (!mediaCodec.isEnabled() || (mediaCodec.getAllowedSessionType() != SessionType.BOTH
 					&& mediaCodec.getAllowedSessionType() != allowedSessionType)) {
 				continue;
 			}
@@ -697,7 +491,7 @@ public abstract class SipuadaPlugin {
 			mediaCodecs = audioCodecs;
 		}
 		for (MediaCodecInstance mediaCodec : mediaCodecs) {
-			if (!mediaCodec.isEnabled || (mediaCodec.getAllowedSessionType() != SessionType.BOTH
+			if (!mediaCodec.isEnabled() || (mediaCodec.getAllowedSessionType() != SessionType.BOTH
 					&& mediaCodec.getAllowedSessionType() != allowedSessionType)) {
 				continue;
 			}
@@ -753,7 +547,7 @@ public abstract class SipuadaPlugin {
 							cloneMediaDescription.setMediaField(mediaField);
 							MediaCodecInstance supportedMediaCodec = null;
 							for (MediaCodecInstance audioCodec : audioCodecs) {
-								if (!audioCodec.isEnabled) {
+								if (!audioCodec.isEnabled()) {
 									continue;
 								}
 								if (audioCodec.getRtpmap().toLowerCase().equals
@@ -763,7 +557,7 @@ public abstract class SipuadaPlugin {
 								}
 							}
 							for (MediaCodecInstance videoCodec : videoCodecs) {
-								if (!videoCodec.isEnabled) {
+								if (!videoCodec.isEnabled()) {
 									continue;
 								}
 								if (videoCodec.getRtpmap().toLowerCase().equals
@@ -931,7 +725,7 @@ public abstract class SipuadaPlugin {
 								(answerRtpmap.toLowerCase().trim())) {
 							MediaCodecInstance supportedMediaCodec = null;
 							for (MediaCodecInstance audioCodec : audioCodecs) {
-								if (!audioCodec.isEnabled) {
+								if (!audioCodec.isEnabled()) {
 									continue;
 								}
 								if (audioCodec.getRtpmap().toLowerCase().equals
@@ -941,7 +735,7 @@ public abstract class SipuadaPlugin {
 								}
 							}
 							for (MediaCodecInstance videoCodec : videoCodecs) {
-								if (!videoCodec.isEnabled) {
+								if (!videoCodec.isEnabled()) {
 									continue;
 								}
 								if (videoCodec.getRtpmap().toLowerCase().equals
@@ -1558,6 +1352,7 @@ public abstract class SipuadaPlugin {
 	 * Checks if there's an ongoing session of given type associated with given callId.
 	 * @return true if plug-in has an ongoing session associated with given callId and type.
 	 */
+	@Override
 	public boolean isSessionPrepared(String callId, SessionType type) {
 		return preparedStreams.containsKey(getSessionKey(callId, type))
 			&& preparedStreams.get(getSessionKey(callId, type)) != null;
@@ -1567,6 +1362,7 @@ public abstract class SipuadaPlugin {
 	 * Checks if there's an ongoing session of given type associated with given callId.
 	 * @return true if plug-in has an ongoing session associated with given callId and type.
 	 */
+	@Override
 	public boolean isSessionOngoing(String callId, SessionType type) {
 		return startedStreams.containsKey(getSessionKey(callId, type))
 			&& startedStreams.get(getSessionKey(callId, type));
@@ -1622,7 +1418,7 @@ public abstract class SipuadaPlugin {
 		}
 	}
 
-	protected abstract boolean doSetupPreparedStreams(String callId, SessionType type,
+	public abstract boolean doSetupPreparedStreams(String callId, SessionType type,
 		Map<String, Map<MediaCodecInstance, Session>> preparedStreams);
 
 	/**
@@ -1652,7 +1448,7 @@ public abstract class SipuadaPlugin {
 		}
 	}
 
-	protected abstract boolean doTerminateStreams(String callId, SessionType type,
+	public abstract boolean doTerminateStreams(String callId, SessionType type,
 		Map<String, Map<MediaCodecInstance, Session>> ongoingStreams);
 
 	protected String getSessionKey(String callId, SessionType type) {

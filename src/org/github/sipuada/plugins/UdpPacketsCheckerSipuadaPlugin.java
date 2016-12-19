@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
-public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
+public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPluginCore {
 
 	private enum AvailableMediaCodec implements SupportedMediaCodec {
 
@@ -75,13 +75,13 @@ public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
 
 	}
 
-    Map<SipuadaPlugin.MediaCodecInstance, Boolean> startedSockets = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Pair<DatagramSocket, DatagramSocket>> incomingSockets = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Pair<Thread, Thread>> incomingSocketThreads = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Boolean> finishedIncomingSockets = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Pair<DatagramSocket, DatagramSocket>> outgoingSockets = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Pair<Thread, Thread>> outgoingSocketThreads = new HashMap<>();
-    Map<SipuadaPlugin.MediaCodecInstance, Boolean> finishedOutgoingSockets = new HashMap<>();
+    Map<MediaCodecInstance, Boolean> startedSockets = new HashMap<>();
+    Map<MediaCodecInstance, Pair<DatagramSocket, DatagramSocket>> incomingSockets = new HashMap<>();
+    Map<MediaCodecInstance, Pair<Thread, Thread>> incomingSocketThreads = new HashMap<>();
+    Map<MediaCodecInstance, Boolean> finishedIncomingSockets = new HashMap<>();
+    Map<MediaCodecInstance, Pair<DatagramSocket, DatagramSocket>> outgoingSockets = new HashMap<>();
+    Map<MediaCodecInstance, Pair<Thread, Thread>> outgoingSocketThreads = new HashMap<>();
+    Map<MediaCodecInstance, Boolean> finishedOutgoingSockets = new HashMap<>();
 
 	public UdpPacketsCheckerSipuadaPlugin() {
 		startPlugin(UUID.randomUUID().toString(),
@@ -90,13 +90,13 @@ public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
 	}
 
 	@Override
-	protected void doStartPlugin() {}
+	public void doStartPlugin() {}
 
 	@Override
-	protected void doStopPlugin() {}
+	public void doStopPlugin() {}
 
 	@Override
-	protected boolean doSetupPreparedStreams(String callId, SessionType type,
+	public boolean doSetupPreparedStreams(String callId, SessionType type,
 			Map<String, Map<MediaCodecInstance, Session>> preparedStreams) {
 		for (MediaCodecInstance supportedMediaCodec : preparedStreams.get(getSessionKey(callId, type)).keySet()) {
 			Session session = preparedStreams.get(getSessionKey(callId, type)).get(supportedMediaCodec);
@@ -211,7 +211,7 @@ public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
 	}
 
 	private void startReceivingPackets(final DatagramSocket incomingSocket, final boolean isData,
-			final SipuadaPlugin.MediaCodecInstance supportedMediaCodec) {
+			final MediaCodecInstance supportedMediaCodec) {
 		finishedIncomingSockets.put(supportedMediaCodec, false);
 		// noinspection InfiniteRecursion
 		Thread socketThread = new Thread(new Runnable() {
@@ -272,7 +272,7 @@ public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
 	}
 
 	private void startSendingPackets(final DatagramSocket outgoingSocket, final boolean isData,
-			final SipuadaPlugin.MediaCodecInstance supportedMediaCodec) {
+			final MediaCodecInstance supportedMediaCodec) {
 		finishedOutgoingSockets.put(supportedMediaCodec, false);
 		// noinspection InfiniteRecursion
 		Thread socketThread = new Thread(new Runnable() {
@@ -339,7 +339,7 @@ public class UdpPacketsCheckerSipuadaPlugin extends SipuadaPlugin {
 	}
 
 	@Override
-	protected boolean doTerminateStreams(String callId, SessionType type,
+	public boolean doTerminateStreams(String callId, SessionType type,
 			Map<String, Map<MediaCodecInstance, Session>> ongoingStreams) {
 		for (MediaCodecInstance supportedMediaCodec : preparedStreams.get(getSessionKey(callId, type)).keySet()) {
 			Session session = preparedStreams.get(getSessionKey(callId, type)).get(supportedMediaCodec);
